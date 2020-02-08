@@ -317,6 +317,8 @@ Docker compose supports [two kinds of variables in its syntax](https://docs.dock
 Codefresh supports both kinds, but notice that variables mentioned in the 
 `composition_variables` yaml group refer to the *first* kind. Any variables defined there are **NOT** passed automatically to containers (use the `environment` yaml group for that purpose).
 
+You need to be aware that variables set in the pipeline are not automatically passed through to the composition. You have to manually do this via the `composition_variables`.
+
 This can be illustrated with the following example:
 
   `codefresh.yml`
@@ -324,6 +326,11 @@ This can be illustrated with the following example:
 {% raw %}
 version: '1.0'
 steps:
+  setenv:
+    image: alpine:latest
+    title: Setting a pipeline variable
+    commands:
+      - cf_export PIPELINE_VAR=FOOBAR
   comp1:
     type: composition
     title: Composition example 1
@@ -339,8 +346,10 @@ steps:
         command: printenv
         environment:
           - FIRST_KEY=VALUE
+          - PIPELINE_VAR
     composition_variables:
       - ANOTHER_KEY=ANOTHER_VALUE
+      - PIPELINE_VAR=${{PIPELINE_VAR}}
 {% endraw %}
 {% endhighlight %}
 
@@ -348,11 +357,14 @@ If you run the compositio,n you will see that the `printenv` command shows the f
 
 ```
 test_service_1  | FIRST_KEY=VALUE
+test_service_1  | PIPELINE_VAR=FOOBAR
 ```
 
-The `FIRST_KEY` variable which is defined explicitly in the `environment` yaml part is correctly passed to the alpine container. The `ANOTHER_KEY` is not visible in the container at all.
+The `FIRST_KEY` variable which is defined explicitly in the `environment` yaml part is correctly passed to the alpine container. The `ANOTHER_KEY` is not visible in the container at all. The `PIPELINE_VAR` is passed through via the `composition_variables` using the `${{}}` syntax.
 
-You should use the `composition_variables` yaml group for variables that you wish to reuse in other parts of your composition using the `${ANOTHER_KEY}` syntax.
+You should use the `composition_variables` yaml group for 
+* variables that you wish to reuse in other parts of your composition using the `${ANOTHER_KEY}` syntax
+* making pipeline variables available to your composition
 
 ## Merging services
 
